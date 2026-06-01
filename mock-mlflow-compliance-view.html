@@ -1,0 +1,282 @@
+<!-- EDD release-gate compliance view. Self-contained, offline. Open in a browser, present full-screen.
+     Toggle BEFORE/AFTER to flip the verdict red->green without touching the network. -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --ink: #0d1b21;
+    --paper: #f4f5f3;
+    --card: #ffffff;
+    --line: #d9dcd6;
+    --muted: #5f6b6f;
+    --rh-red: #ee0000;
+    --pass: #1f9d57;
+    --review: #d98300;
+    --fail: #d2362a;
+    --mlflow: #0194e2;
+    --shadow: 0 1px 0 rgba(13,27,33,.04), 0 12px 32px -16px rgba(13,27,33,.28);
+  }
+  * { box-sizing: border-box; }
+  .edd { font-family: 'IBM Plex Sans', system-ui, sans-serif; color: var(--ink);
+    background:
+      radial-gradient(120% 80% at 100% 0%, rgba(238,0,0,.05), transparent 60%),
+      var(--paper);
+    min-height: 100vh; padding: 28px clamp(16px, 4vw, 56px) 56px; line-height: 1.45; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* top bar */
+  .edd-top { display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    flex-wrap: wrap; padding-bottom: 18px; border-bottom: 2px solid var(--ink); }
+  .edd-brand { display: flex; align-items: center; gap: 14px; }
+  .edd-mark { width: 34px; height: 34px; border-radius: 7px; background: var(--mlflow);
+    display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px;
+    box-shadow: var(--shadow); letter-spacing: .5px; }
+  .edd-brand h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+  .edd-brand .sub { font-size: 12px; color: var(--muted); }
+  .edd-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--card); padding: 3px; box-shadow: var(--shadow); }
+  .edd-toggle button { font-family: inherit; font-size: 12.5px; font-weight: 600; border: 0;
+    background: transparent; color: var(--muted); padding: 8px 16px; border-radius: 999px;
+    cursor: pointer; letter-spacing: .3px; transition: .18s; }
+  .edd-toggle button.on { background: var(--ink); color: #fff; }
+
+  /* verdict banner */
+  .edd-verdict { margin: 22px 0; border-radius: 14px; padding: 22px 26px; color: #fff;
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    box-shadow: var(--shadow); flex-wrap: wrap; transition: background .25s; }
+  .edd-verdict.fail { background: linear-gradient(100deg, #b71f17, var(--fail)); }
+  .edd-verdict.pass { background: linear-gradient(100deg, #137a43, var(--pass)); }
+  .edd-verdict .lead { display: flex; align-items: center; gap: 18px; }
+  .edd-verdict .glyph { width: 52px; height: 52px; border-radius: 50%;
+    background: rgba(255,255,255,.16); display: grid; place-items: center; font-size: 26px; font-weight: 700; }
+  .edd-verdict .state { font-size: 26px; font-weight: 700; letter-spacing: .3px; line-height: 1.1; }
+  .edd-verdict .gate { font-size: 13px; opacity: .92; }
+  .edd-score { text-align: right; }
+  .edd-score .big { font-size: 40px; font-weight: 700; line-height: 1; }
+  .edd-score .thr { font-size: 12.5px; opacity: .9; }
+
+  /* meta grid */
+  .edd-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; margin-bottom: 22px; }
+  .edd-meta div { background: var(--card); padding: 12px 14px; }
+  .edd-meta .k { font-size: 10.5px; letter-spacing: .9px; text-transform: uppercase; color: var(--muted); }
+  .edd-meta .v { font-size: 13px; margin-top: 3px; font-weight: 500; word-break: break-word; }
+
+  .edd-section { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  .edd-cols { display: grid; grid-template-columns: 1.55fr .95fr; gap: 22px; align-items: start; }
+  @media (max-width: 880px) { .edd-cols { grid-template-columns: 1fr; } }
+
+  /* benchmark rows */
+  .edd-row { background: var(--card); border: 1px solid var(--line); border-radius: 11px;
+    padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .edd-row .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .edd-row .name { font-weight: 600; font-size: 14px; }
+  .edd-row .layer { font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--muted); margin-top: 2px; }
+  .edd-row .prov { font-size: 11.5px; color: var(--muted); }
+  .badge { font-size: 11px; font-weight: 700; letter-spacing: .5px; padding: 4px 10px;
+    border-radius: 999px; text-transform: uppercase; white-space: nowrap; }
+  .badge.pass { background: rgba(31,157,87,.12); color: var(--pass); }
+  .badge.review { background: rgba(217,131,0,.14); color: var(--review); }
+  .badge.fail { background: rgba(210,54,42,.12); color: var(--fail); }
+  .edd-bar { height: 7px; border-radius: 999px; background: #e7e9e4; margin: 11px 0 8px; position: relative; overflow: hidden; }
+  .edd-bar i { position: absolute; top: 0; left: 0; bottom: 0; border-radius: 999px; transition: width .35s; }
+  .edd-bar .thrmark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); opacity: .55; }
+  .edd-row .stat { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+  .edd-row .stat .mono { color: var(--ink); font-weight: 500; }
+  .edd-row .arts { margin-top: 9px; font-size: 11px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+  .edd-row .arts span b { color: var(--ink); font-weight: 500; }
+
+  /* side panel */
+  .edd-side { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px; box-shadow: var(--shadow); position: sticky; top: 20px; }
+  .edd-side h3 { font-size: 12.5px; margin: 0 0 12px; letter-spacing: .3px; }
+  .edd-side .line { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px;
+    padding: 7px 0; border-bottom: 1px dashed var(--line); }
+  .edd-side .line:last-of-type { border-bottom: 0; }
+  .edd-side .line .k { color: var(--muted); }
+  .edd-side .tags { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .edd-side .tag { font-size: 10.5px; padding: 3px 8px; border-radius: 6px;
+    background: #eef0ec; color: #3a4549; }
+  .edd-gateline { margin-top: 14px; padding: 10px 12px; border-radius: 8px; font-size: 12px;
+    background: #0d1b21; color: #e8ece9; }
+  .edd-gateline.fail { color: #ff9c92; }
+  .edd-gateline.pass { color: #84e0ad; }
+  .edd-foot { margin-top: 22px; font-size: 11px; color: var(--muted); display: flex;
+    justify-content: space-between; gap: 14px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 12px; }
+  .edd-foot .rh { color: var(--rh-red); font-weight: 600; }
+</style>
+
+<div class="edd">
+  <div class="edd-top">
+    <div class="edd-brand">
+      <div class="edd-mark">ML</div>
+      <div>
+        <h1>EvalHub × MLflow — Release Gate Audit Record</h1>
+        <div class="sub">Experiment <span class="mono">edd-release-gate</span> · shared by engineering &amp; compliance</div>
+      </div>
+    </div>
+    <div class="edd-toggle">
+      <button id="btn-before" class="on" onclick="render('before')">Before hardening</button>
+      <button id="btn-after" onclick="render('after')">After hardening</button>
+    </div>
+  </div>
+
+  <div id="verdict" class="edd-verdict fail"></div>
+  <div id="meta" class="edd-meta"></div>
+
+  <div class="edd-cols">
+    <div>
+      <p class="edd-section">Evaluation layers — one run, one record</p>
+      <div id="rows"></div>
+    </div>
+    <div>
+      <div class="edd-side">
+        <h3>Run provenance</h3>
+        <div id="side"></div>
+        <div id="gateline" class="edd-gateline fail"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="edd-foot">
+    <span>Databricks is the engine. EvalHub is the impartial judge. MLflow is the queryable audit trail.</span>
+    <span class="rh">Red Hat AI · Data + AI Summit 2026</span>
+  </div>
+</div>
+
+<script>
+  const LAYER = {
+    agent_trace_judge: 'Layer 2 · Behavioral',
+    truthfulqa_mc2:    'Layer 1 · Safety & Fairness',
+    quality:           'Layer 1 · Safety & Fairness',
+    owasp_llm_top10:   'Layer 3 · Adversarial',
+    arc_easy:          'Capability baseline'
+  };
+  const LABEL = {
+    agent_trace_judge: 'Agent trace judge',
+    truthfulqa_mc2:    'Truthfulness (TruthfulQA)',
+    quality:           'Content quality & bias',
+    owasp_llm_top10:   'OWASP LLM Top 10',
+    arc_easy:          'ARC-Easy'
+  };
+
+  const DATA = {
+    before: {
+      runId: 'rc1-9f2a4b7c-1122-4d8e-9a3f-77c0de551001',
+      candidate: 'credit-assistant-v1.4.0-rc1',
+      created: '2026-06-18 15:02:11 UTC', updated: '2026-06-18 15:14:48 UTC',
+      score: 0.66, threshold: 0.75, pass: false,
+      benchmarks: [
+        { id:'agent_trace_judge', score:0.72, thr:0.80, lower:false, pass:false, note:'off-task at step 3, step 4 skipped', mlflow:'8d31c0aa…f001' },
+        { id:'truthfulqa_mc2', score:0.78, thr:0.50, lower:false, pass:true, note:'acc 0.78', mlflow:'8d31c0aa…f002' },
+        { id:'quality', score:0.27, thr:0.30, lower:true, pass:true, note:'4 stereotype-bias flags', mlflow:'8d31c0aa…f003' },
+        { id:'owasp_llm_top10', score:0.41, thr:0.20, lower:true, pass:false, note:'system prompt leak exposed', mlflow:'8d31c0aa…f004' },
+        { id:'arc_easy', score:0.85, thr:0.50, lower:false, pass:true, note:'acc_norm 0.85', mlflow:'8d31c0aa…f005' }
+      ]
+    },
+    after: {
+      runId: 'rc2-3b8e1a05-44fa-4c19-8d7b-77c0de551042',
+      candidate: 'credit-assistant-v1.4.0-rc2',
+      created: '2026-06-18 15:39:02 UTC', updated: '2026-06-18 15:51:30 UTC',
+      score: 0.88, threshold: 0.75, pass: true,
+      benchmarks: [
+        { id:'agent_trace_judge', score:0.86, thr:0.80, lower:false, pass:true, note:'all 4 steps correct', mlflow:'c7f9e2bb…e101' },
+        { id:'truthfulqa_mc2', score:0.81, thr:0.50, lower:false, pass:true, note:'acc 0.81', mlflow:'c7f9e2bb…e102' },
+        { id:'quality', score:0.12, thr:0.30, lower:true, pass:true, note:'0 bias flags', mlflow:'c7f9e2bb…e103' },
+        { id:'owasp_llm_top10', score:0.08, thr:0.20, lower:true, pass:true, note:'leak patched, all probes blocked', mlflow:'c7f9e2bb…e104' },
+        { id:'arc_easy', score:0.86, thr:0.50, lower:false, pass:true, note:'acc_norm 0.86', mlflow:'c7f9e2bb…e105' }
+      ]
+    }
+  };
+
+  // a passing benchmark within 0.05 of its threshold is flagged for human review
+  function statusOf(b){
+    if(!b.pass) return 'fail';
+    const margin = b.lower ? (b.thr - b.score) : (b.score - b.thr);
+    return margin < 0.05 ? 'review' : 'pass';
+  }
+  const COLOR = { pass:'var(--pass)', review:'var(--review)', fail:'var(--fail)' };
+
+  function render(which){
+    const d = DATA[which];
+    document.getElementById('btn-before').classList.toggle('on', which==='before');
+    document.getElementById('btn-after').classList.toggle('on', which==='after');
+
+    const v = document.getElementById('verdict');
+    v.className = 'edd-verdict ' + (d.pass ? 'pass' : 'fail');
+    v.innerHTML = `
+      <div class="lead">
+        <div class="glyph">${d.pass ? '✓' : '✕'}</div>
+        <div>
+          <div class="state">${d.pass ? 'GOVERNANCE READY' : 'RELEASE BLOCKED'}</div>
+          <div class="gate">${d.pass ? 'Gate passed — candidate may be promoted to production' : 'Gate failed — 1 critical finding must be remediated'}</div>
+        </div>
+      </div>
+      <div class="edd-score">
+        <div class="big">${d.score.toFixed(2)}</div>
+        <div class="thr">weighted score · threshold ${d.threshold.toFixed(2)}</div>
+      </div>`;
+
+    document.getElementById('meta').innerHTML = [
+      ['Candidate', d.candidate],
+      ['Model under test', 'credit-assistant-llama-3-3-70b'],
+      ['Engine', 'Databricks Model Serving'],
+      ['Judge', 'EvalHub (in-cluster)'],
+      ['Run id', `<span class="mono">${d.runId}</span>`],
+      ['Completed', d.updated]
+    ].map(([k,val]) => `<div><div class="k">${k}</div><div class="v">${val}</div></div>`).join('');
+
+    document.getElementById('rows').innerHTML = d.benchmarks.map(b => {
+      const st = statusOf(b);
+      const pct = Math.max(4, Math.min(100, b.score*100));
+      const thrPct = Math.max(0, Math.min(100, b.thr*100));
+      return `<div class="edd-row">
+        <div class="top">
+          <div>
+            <div class="name">${LABEL[b.id]}</div>
+            <div class="layer">${LAYER[b.id]}</div>
+          </div>
+          <span class="badge ${st}">${st}</span>
+        </div>
+        <div class="edd-bar">
+          <i style="width:${pct}%; background:${COLOR[st]}"></i>
+          <span class="thrmark" style="left:${thrPct}%" title="threshold"></span>
+        </div>
+        <div class="stat">
+          <span>score <span class="mono">${b.score.toFixed(2)}</span> · threshold <span class="mono">${b.thr.toFixed(2)}</span> ${b.lower?'(lower is better)':''}</span>
+          <span>${b.note}</span>
+        </div>
+        <div class="arts">
+          <span><b>provider</b> ${b.id==='quality'||b.id==='owasp_llm_top10'?'garak':(b.id==='agent_trace_judge'?'custom_agent_judge':'lm_evaluation_harness')}</span>
+          <span><b>mlflow_run_id</b> <span class="mono">${b.mlflow}</span></span>
+        </div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('side').innerHTML = [
+      ['Owner', 'frank.lavigne@redhat.com'],
+      ['Tenant', 'default'],
+      ['Pipeline', 'release-gate'],
+      ['Created', d.created],
+      ['Artifacts', 's3://evalhub-audit/…'],
+      ['Record', 'immutable']
+    ].map(([k,val]) => `<div class="line"><span class="k">${k}</span><span class="mono">${val}</span></div>`).join('')
+     + `<div class="tags">
+          <span class="tag">team:ml-platform</span>
+          <span class="tag">pipeline:release-gate</span>
+          <span class="tag">engine:databricks</span>
+          <span class="tag">judge:evalhub</span>
+        </div>`;
+
+    const g = document.getElementById('gateline');
+    g.className = 'edd-gateline ' + (d.pass ? 'pass' : 'fail');
+    g.innerHTML = d.pass
+      ? '<span class="mono">$ release-gate → exit 0 ✓ promote</span>'
+      : '<span class="mono">$ release-gate → exit 1 ✕ blocked</span>';
+  }
+
+  render('before');
+</script>

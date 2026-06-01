@@ -1,0 +1,28 @@
+{
+  "name": "credit-assistant-release-gate",
+  "description": "Release gate for the credit-assistant agent. Databricks serves the model (the engine); EvalHub is the impartial judge running in our own cluster; the verdict lands as one MLflow record engineering and compliance both query. POST to /api/v1/evaluations/jobs.",
+  "tags": ["edd", "release-gate", "summit-demo", "release-candidate"],
+  "model": {
+    "url": "https://dbc-a1b2c3d4-5e6f.cloud.databricks.com/serving-endpoints",
+    "name": "credit-assistant-llama-3-3-70b",
+    "auth": {
+      "secret_ref": "databricks-serving-token"
+    }
+  },
+  "collection": {
+    "id": "edd-release-suite"
+  },
+  "pass_criteria": {
+    "threshold": 0.75
+  },
+  "experiment": {
+    "name": "edd-release-gate",
+    "tags": [
+      { "key": "team", "value": "ml-platform" },
+      { "key": "pipeline", "value": "release-gate" },
+      { "key": "candidate", "value": "credit-assistant-v1.4.0-rc1" },
+      { "key": "engine", "value": "databricks-model-serving" },
+      { "key": "judge", "value": "evalhub" }
+    ]
+  }
+}
