@@ -6,6 +6,10 @@ Runnable demo harness for the Data + AI Summit 2026 session (Carlos Condado · F
 
 Built to survive flaky conference wifi: **every step transparently degrades to the recorded results in `./specs`**, so the demo always completes and the story is identical either way.
 
+**Platform guides:** [Mac (Apple Silicon)](docs/run-on-mac-apple-silicon.md) ·
+[NVIDIA DGX Spark](docs/run-on-dgx-spark.md) ·
+[OpenShift AI](docs/run-on-openshift-ai.md)
+
 ---
 
 ## The 4-command demo
@@ -51,7 +55,7 @@ with identical output shapes:
 
 | Provider | What it is |
 |---|---|
-| `LiveProvider` | real HTTP against EvalHub (`$EVALHUB`, default `http://localhost:8080`) |
+| `LiveProvider` | real HTTP against EvalHub (`$EVALHUB`, default `http://localhost:8080`; set `$EVALHUB_TOKEN` for an authenticated route, e.g. OpenShift) |
 | `FixtureProvider` | the recorded job records in `./specs` — zero network |
 
 The gate runs in one of four modes (`GATE_MODE` env var, or `--mode` / `--offline` flags):

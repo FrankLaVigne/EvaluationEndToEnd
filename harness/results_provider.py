@@ -56,6 +56,13 @@ def evalhub_url() -> str:
     return os.environ.get("EVALHUB", DEFAULT_EVALHUB).rstrip("/")
 
 
+def auth_headers() -> dict:
+    """Bearer token for an EvalHub behind an authenticated route (e.g. an
+    OpenShift Route). Empty when EVALHUB_TOKEN is unset (local mode)."""
+    token = os.environ.get("EVALHUB_TOKEN", "")
+    return {"Authorization": f"Bearer {token}"} if token else {}
+
+
 def load_job_spec(path: Path | None = None) -> dict:
     return json.loads((path or SPECS / "job-edd-release-gate.json").read_text())
 
@@ -108,7 +115,7 @@ class LiveProvider:
     def health(self, timeout: float = 2.0) -> bool:
         for path in HEALTH_PATHS:
             try:
-                r = requests.get(f"{self.base_url}{path}", timeout=timeout)
+                r = requests.get(f"{self.base_url}{path}", headers=auth_headers(), timeout=timeout)
                 if r.ok:
                     return True
             except requests.RequestException:
@@ -116,7 +123,7 @@ class LiveProvider:
         return False
 
     def providers(self) -> list[dict]:
-        r = requests.get(f"{self.base_url}{PROVIDERS_PATH}", timeout=10)
+        r = requests.get(f"{self.base_url}{PROVIDERS_PATH}", headers=auth_headers(), timeout=10)
         r.raise_for_status()
         body = r.json()
         # the list may be the body itself or nested under a key
@@ -128,17 +135,19 @@ class LiveProvider:
 
     def put_collection(self, collection: dict) -> dict:
         cid = collection["name"]
-        r = requests.put(f"{self.base_url}{COLLECTIONS_PATH}/{cid}", json=collection, timeout=30)
+        r = requests.put(f"{self.base_url}{COLLECTIONS_PATH}/{cid}", json=collection,
+                         headers=auth_headers(), timeout=30)
         r.raise_for_status()
         return r.json() if r.text else {}
 
     def submit(self) -> str:
-        r = requests.post(f"{self.base_url}{JOBS_PATH}", json=self.job_spec, timeout=30)
+        r = requests.post(f"{self.base_url}{JOBS_PATH}", json=self.job_spec,
+                          headers=auth_headers(), timeout=30)
         r.raise_for_status()
         return r.json()["resource"]["id"]
 
     def fetch(self, job_id: str) -> dict:
-        r = requests.get(f"{self.base_url}{JOBS_PATH}/{job_id}", timeout=30)
+        r = requests.get(f"{self.base_url}{JOBS_PATH}/{job_id}", headers=auth_headers(), timeout=30)
         r.raise_for_status()
         return r.json()
 
