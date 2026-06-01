@@ -20,7 +20,7 @@
     "tags": [
       { "key": "team", "value": "ml-platform" },
       { "key": "pipeline", "value": "release-gate" },
-      { "key": "candidate", "value": "credit-assistant-v1.4.0-rc1" },
+      { "key": "candidate", "value": "credit-assistant-v1.4.0-rc2" },
       { "key": "engine", "value": "databricks-model-serving" },
       { "key": "judge", "value": "evalhub" }
     ]
