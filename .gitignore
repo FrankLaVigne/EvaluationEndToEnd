@@ -1,0 +1,20 @@
+# local MLflow fallback store (used when the docker MLflow server is down)
+mlruns/
+mlruns.db
+mlartifacts/
+
+# prebaked live job ids (machine-specific; created by `make prebake`)
+.prebaked-jobs.json
+
+# provider id mapping discovered at preflight (cluster-specific)
+.provider-map.json
+
+# python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+uv.lock

@@ -1,0 +1,71 @@
+# EvalHub local mode + MLflow tracking server -- no Kubernetes, runs on a laptop.
+#
+#   docker compose up -d --wait
+#   MLflow UI:   http://localhost:5000   (experiment: edd-release-gate)
+#   EvalHub API: http://localhost:8080   (GET /api/v1/health)
+#
+# EVALHUB_IMAGE
+#   The EvalHub server image. The default points at the Red Hat Ecosystem
+#   Catalog build (requires `docker login registry.redhat.io`). If your team
+#   publishes a different local-mode image, override it:
+#
+#     EVALHUB_IMAGE=quay.io/<your-org>/eval-hub:<tag> docker compose up -d
+#
+#   Confirm exact image + env var names against the local-mode guide:
+#   https://eval-hub.github.io/guides/local-mode/
+#
+# DATABRICKS_TOKEN
+#   Personal access token for the Databricks serving endpoint named in
+#   specs/job-edd-release-gate.json (model.auth.secret_ref =
+#   databricks-serving-token). Only needed for live runs; replay/offline
+#   modes never touch Databricks.
+
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.4.0
+    container_name: edd-mlflow
+    command: >
+      mlflow server
+      --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --serve-artifacts --artifacts-destination /mlflow/artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
+
+  evalhub:
+    # Red Hat Ecosystem Catalog build of EvalHub (odh-eval-hub). Swap via
+    # EVALHUB_IMAGE if you have a different local-mode image.
+    image: ${EVALHUB_IMAGE:-registry.redhat.io/rhoai/odh-eval-hub-rhel9:latest}
+    container_name: edd-evalhub
+    environment:
+      # documented EvalHub MLflow integration (eval-hub.github.io)
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_INSECURE_SKIP_VERIFY: "true"
+      # passed through for live runs against the Databricks serving endpoint;
+      # the job spec references this secret as `databricks-serving-token`
+      DATABRICKS_TOKEN: ${DATABRICKS_TOKEN:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    volumes:
+      - evalhub-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/v1/health || curl -fsS http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
+
+volumes:
+  mlflow-data:
+  evalhub-data:
