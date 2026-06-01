@@ -14,6 +14,12 @@
 #   Confirm exact image + env var names against the local-mode guide:
 #   https://eval-hub.github.io/guides/local-mode/
 #
+# MLFLOW_PORT
+#   Host port for the MLflow UI (default 5000). On macOS, AirPlay Receiver
+#   squats on port 5000 -- either disable it (System Settings > General >
+#   AirDrop & Handoff) or run with MLFLOW_PORT=5001 and
+#   export MLFLOW_TRACKING_URI=http://localhost:5001 in the demo shell.
+#
 # DATABRICKS_TOKEN
 #   Personal access token for the Databricks serving endpoint named in
 #   specs/job-edd-release-gate.json (model.auth.secret_ref =
@@ -30,7 +36,7 @@ services:
       --backend-store-uri sqlite:////mlflow/mlflow.db
       --serve-artifacts --artifacts-destination /mlflow/artifacts
     ports:
-      - "5000:5000"
+      - "${MLFLOW_PORT:-5000}:5000"
     volumes:
       - mlflow-data:/mlflow
     healthcheck:
