@@ -67,6 +67,26 @@ def load_job_spec(path: Path | None = None) -> dict:
     return json.loads((path or SPECS / "job-edd-release-gate.json").read_text())
 
 
+def apply_maas_override(job_spec: dict) -> dict:
+    """If a Red Hat MaaS endpoint is configured (.env / MAAS_*), point the job's
+    model at it instead of the placeholder Databricks endpoint in the spec. The
+    committed spec stays secret-free; the live target is supplied at runtime.
+
+    EvalHub resolves the key from the `maas-api-key` secret_ref -- pass
+    MAAS_API_KEY into the EvalHub container (see docker-compose.yaml). Offline
+    and replay modes never read .model, so this is a no-op there."""
+    from harness import maas
+    cfg = maas.maas_config()
+    if not cfg:
+        return job_spec
+    model = job_spec.setdefault("model", {})
+    model["url"] = cfg["endpoint"]
+    model["name"] = cfg["model"]
+    model.setdefault("auth", {})["secret_ref"] = "maas-api-key"
+    log(f"[model -> Red Hat MaaS: {cfg['model']} @ {cfg['endpoint']} key={maas.masked_key()}]")
+    return job_spec
+
+
 def candidate_of(job_spec: dict) -> str:
     for tag in job_spec.get("experiment", {}).get("tags", []):
         if tag.get("key") == "candidate":
@@ -108,7 +128,7 @@ class LiveProvider:
     """Real HTTP against an EvalHub server."""
 
     def __init__(self, job_spec: dict, base_url: str | None = None):
-        self.job_spec = job_spec
+        self.job_spec = apply_maas_override(job_spec)
         self.base_url = (base_url or evalhub_url()).rstrip("/")
         self.name = f"live EvalHub ({self.base_url})"
 

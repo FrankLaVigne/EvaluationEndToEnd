@@ -14,6 +14,10 @@ Run them in order:
 | [`02-release-gate-blocked.ipynb`](02-release-gate-blocked.ipynb) | **Demo 2** — the gate blocks rc1 (exit 1) |
 | [`03-harden-and-promote.ipynb`](03-harden-and-promote.ipynb) | **Demo 3+4** — harden, then the gate promotes rc2 (exit 0) |
 | [`04-compliance-view.ipynb`](04-compliance-view.ipynb) | the MLflow compliance record |
+| [`05-live-maas.ipynb`](05-live-maas.ipynb) | **online vs offline** — run the probe/gate against a live Red Hat AI MaaS model |
+
+`00`–`04` are fully offline. `05` is optional and adds the **online** path (a live Red Hat AI
+MaaS endpoint); with no `.env` it simply degrades back to the offline behavior.
 
 ## Running them
 
@@ -31,5 +35,7 @@ exactly as they do from a terminal — you can open the notebooks from anywhere.
   working tree is left clean (back on rc1) for the next rehearsal.
 - `04-compliance-view.ipynb` reads the MLflow runs that 02–03 create in `../mlruns.db`; run those
   first, or it will tell you to.
+- `05-live-maas.ipynb` needs a `.env` (copy `../.env.example`) to actually go online; without one
+  it runs offline. See "Online vs offline" in the top-level README for the full key-safety notes.
 - Notebooks are committed **without** saved output. The ANSI banners (red BLOCKED / green PROMOTE)
   render in JupyterLab when you run the cells.

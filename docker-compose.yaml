@@ -58,6 +58,13 @@ services:
       # passed through for live runs against the Databricks serving endpoint;
       # the job spec references this secret as `databricks-serving-token`
       DATABRICKS_TOKEN: ${DATABRICKS_TOKEN:-}
+      # Red Hat AI MaaS live target (optional). docker compose auto-loads .env
+      # in this dir, so the same MAAS_* vars feed both the harness and EvalHub.
+      # apply_maas_override() rewrites the job's model to this endpoint and
+      # references the key as the `maas-api-key` secret.
+      MAAS_ENDPOINT: ${MAAS_ENDPOINT:-}
+      MAAS_MODEL: ${MAAS_MODEL:-}
+      MAAS_API_KEY: ${MAAS_API_KEY:-}
     ports:
       - "8080:8080"
     depends_on:

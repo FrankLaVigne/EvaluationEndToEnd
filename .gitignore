@@ -9,6 +9,9 @@ mlartifacts/
 # provider id mapping discovered at preflight (cluster-specific)
 .provider-map.json
 
+# live MaaS endpoint config -- holds the API key, never commit (use .env.example)
+.env
+
 # jupyter
 .ipynb_checkpoints/
 

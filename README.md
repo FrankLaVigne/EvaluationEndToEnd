@@ -173,6 +173,33 @@ Verify the flip locally without any network: `make probe` now refuses (exit 0), 
 guardrail; in replay/offline mode the candidate tag (rc2) selects the corresponding recorded
 verdict — same story, same numbers.
 
+## Online vs offline — a live Red Hat AI MaaS endpoint (optional)
+
+Every demo step runs **offline** by default (canned agent + recorded fixtures). You can also run
+the probe and the gate **online** against a live **Red Hat AI MaaS** (Models-as-a-Service) model —
+OpenAI-compatible, gated by an API key (issued/rate-limited by 3scale). Online turns the OWASP
+probe into a real jailbreak attempt against a real model; **every online path degrades to the
+offline path** on any error, so it can never break the demo.
+
+| | Offline (default) | Online (live MaaS) |
+|---|---|---|
+| OWASP probe | `make probe` | `make probe-live` |
+| Release gate | `make gate-offline` | `make gate-live` (or `make gate` = auto) |
+| Notebook | `notebooks/00`–`04` | `notebooks/05-live-maas.ipynb` |
+
+**Going online (keys via a gitignored `.env`):**
+
+```bash
+cp .env.example .env     # then set MAAS_ENDPOINT (incl. /v1), MAAS_MODEL, MAAS_API_KEY
+make probe-live          # real model; degrades to canned if .env is missing/unreachable
+```
+
+The key lives only in `.env` (gitignored, **never committed**), is never printed (logs show the
+last 4 only), and `apply_maas_override()` rewrites the job's `model` to your endpoint at submit
+time so the committed spec stays secret-free. `docker-compose.yaml` passes `MAAS_API_KEY` through
+to EvalHub for online gate runs. **Provision a dedicated, scoped, short-lived demo key the morning
+of the talk and revoke it after.**
+
 ## Provider ids — the placeholder, handled honestly
 
 `custom_agent_judge` in `specs/collection-edd-release-suite.json` is a **placeholder**: the

@@ -60,6 +60,12 @@ The pieces communicate through one seam and one set of JSON shapes:
   refuses to ship it silently and writes resolved swaps to `.provider-map.json`.
 - **`harness/mlflow_sync.py`** — recreates the EvalHub job record in local MLflow from fixtures
   (so the compliance-view beat works offline). Best-effort; never blocks the verdict.
+- **`harness/maas.py`** — optional **online** path: an OpenAI-compatible client for a live Red Hat
+  AI MaaS model (config from a gitignored `.env` via `MAAS_*`; uses `requests`, no new deps). The
+  key is never printed (`masked_key()` shows last 4). `apply_maas_override()` in
+  `results_provider.py` rewrites the job's `.model` to MaaS at submit time when configured; the
+  agent's `--live` probe routes through `maas.chat()`. Both degrade to the offline/canned path on
+  any failure — keep that invariant.
 - **`agent/credit_agent.py`** — the canned agent + MLflow trace logger + the OWASP probe path.
 - **`release-gate.sh`** — calls the `gate` CLI, parses the verdict, prints the banner, exits 0/1
   (or 2 on harness error). This is the CI-gate artifact the demo is about.
