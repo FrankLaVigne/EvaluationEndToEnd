@@ -14,6 +14,10 @@ Built to survive flaky conference wifi: **every step transparently degrades to t
 one notebook per beat, running the real commands fully offline. Start with
 [`notebooks/00-setup.ipynb`](notebooks/00-setup.ipynb).
 
+**Prefer a UI?** `make setup-ui && make ui` launches the **EDD Eval Console** ([`app.py`](app.py)) —
+a one-screen web panel with a live/cached toggle, the OWASP probe, and the release gate. See
+[Web console](#web-console-edd-eval-console) below.
+
 ---
 
 ## The 4-command demo
@@ -113,10 +117,13 @@ release-gate.sh                     parses results.test.pass → red BLOCKED (ex
                                     green PROMOTE (exit 0); a real CI gate
 docker-compose.yaml                 EvalHub local mode + MLflow tracking server
 hardening.patch                     the rc1 → rc2 fix (also available as branch `hardened`)
-demo-runbook.md                     minute-by-minute presenter runbook
+demo-runbook.md                     minute-by-minute presenter runbook (ops: timings, fallbacks)
+demo-script.md                      the spoken talk track (what to say + do), aligned to the deck
 mock-mlflow-compliance-view.html    self-contained offline compliance dashboard (final fallback)
 Makefile                            all of the above as one-word targets (`make help`)
-notebooks/                          the same demo interactively, one notebook per beat (00-04)
+notebooks/                          the same demo interactively, one notebook per beat (00-05)
+app.py                              the EDD Eval Console -- web UI (Streamlit) over the harness
+harness/console.py                  Streamlit-free logic the web UI renders (probe + gate)
 ```
 
 ---
@@ -230,6 +237,32 @@ Verified verdicts (rc1 → rc2), identical narrative in both modes:
 |---|---|---|
 | rc1 | ⚠ system prompt EXPOSED | ⚠ system prompt EXPOSED |
 | rc2 | ✓ leak BLOCKED | ✓ leak BLOCKED |
+
+## Web console (EDD Eval Console)
+
+A one-screen alternative to the terminal — useful for a booth, a hands-on session, or any audience
+that prefers a dashboard to a shell. It's a thin Streamlit shell over the same harness
+([`harness/console.py`](harness/console.py)); it adds no new logic and is as wifi-proof as
+everything else (degrades to fixtures).
+
+```bash
+make setup-ui      # one time: installs streamlit (the [ui] extra)
+make ui            # -> http://localhost:8501
+```
+
+What it gives you on one screen:
+
+- **Run against:** a `Cached fixtures` ⇄ `Live Red Hat MaaS` toggle (the degradation story as a
+  literal switch). The sidebar shows whether `.env` is configured and the masked key.
+- **Candidate:** the current rc1/rc2 state, with **Apply hardening** / **Revert** buttons (they
+  run `make harden` / `make unharden`, so the working tree stays the source of truth).
+- **OWASP probe:** pick a preset (verbatim-repeat, translate-bypass, naive) or type your own;
+  see EXPOSED vs BLOCKED and the actual reply.
+- **Release gate:** the PROMOTE/BLOCKED verdict, weighted score vs threshold, the per-benchmark
+  table, and the verdict source (live ⇄ fixtures).
+
+The CLI (`./release-gate.sh`) remains the authentic "this is real CI / exit 1" surface; the
+console is the friendlier face of the same run.
 
 ## Provider ids — the placeholder, handled honestly
 

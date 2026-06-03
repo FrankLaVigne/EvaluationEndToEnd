@@ -8,5 +8,10 @@ dependencies = [
     "requests>=2.31",
 ]
 
+[project.optional-dependencies]
+# the web console (app.py); install with: pip install -e ".[ui]"
+ui = ["streamlit>=1.50"]
+
 [tool.setuptools]
 packages = ["agent", "harness"]
+py-modules = ["app"]
