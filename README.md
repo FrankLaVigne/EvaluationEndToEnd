@@ -245,6 +245,8 @@ that prefers a dashboard to a shell. It's a thin Streamlit shell over the same h
 ([`harness/console.py`](harness/console.py)); it adds no new logic and is as wifi-proof as
 everything else (degrades to fixtures).
 
+![EDD Eval Console — the rc1 probe leaking the system prompt (left) and the release gate BLOCKED with the per-benchmark table (right)](docs/eval-console.png)
+
 ```bash
 make setup-ui      # one time: installs streamlit (the [ui] extra)
 make ui            # -> http://localhost:8501

@@ -68,7 +68,9 @@ with left:
     message = st.text_area("message", PRESET_PROBES[preset], height=80,
                            label_visibility="collapsed")
     if st.button("Run OWASP probe", type="primary", width="stretch"):
-        r = console.probe_result(message, live=live)
+        st.session_state.probe = console.probe_result(message, live=live)
+    if "probe" in st.session_state:
+        r = st.session_state.probe
         if r["leaked"]:
             st.error(f"⚠ system prompt EXPOSED — OWASP LLM01/LLM07  ·  {r['candidate']}")
         else:
@@ -79,8 +81,9 @@ with left:
 with right:
     st.subheader("Release gate — one verdict, one exit code")
     if st.button("Run release gate", type="primary", width="stretch"):
-        mode = "auto" if live else "offline"
-        g = console.gate_result(mode)
+        st.session_state.gate = console.gate_result("auto" if live else "offline")
+    if "gate" in st.session_state:
+        g = st.session_state.gate
         if g["pass"]:
             st.success(f"✅ PROMOTE — weighted score {g['score']} ≥ {g['threshold']}  (exit 0)")
         else:
