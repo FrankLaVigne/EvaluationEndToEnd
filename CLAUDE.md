@@ -67,6 +67,11 @@ The pieces communicate through one seam and one set of JSON shapes:
   agent's `--live` probe routes through `maas.chat()`. Both degrade to the offline/canned path on
   any failure — keep that invariant.
 - **`agent/credit_agent.py`** — the canned agent + MLflow trace logger + the OWASP probe path.
+- **`app.py` + `harness/console.py`** — the optional **web console** (Streamlit). `console.py`
+  holds the Streamlit-free logic (probe + gate) so it stays importable/testable; `app.py` is the
+  thin UI. No new logic — it reuses the agent and `run_gate`; live/cached maps to the existing
+  modes and degrades to fixtures. Test the UI with `streamlit.testing.v1.AppTest`, not a browser.
+  Installed via the `[ui]` extra (`make setup-ui`); launched with `make ui`.
 - **`release-gate.sh`** — calls the `gate` CLI, parses the verdict, prints the banner, exits 0/1
   (or 2 on harness error). This is the CI-gate artifact the demo is about.
 
