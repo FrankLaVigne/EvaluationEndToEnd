@@ -10,6 +10,10 @@ Built to survive flaky conference wifi: **every step transparently degrades to t
 [NVIDIA DGX Spark](docs/run-on-dgx-spark.md) ·
 [OpenShift AI](docs/run-on-openshift-ai.md)
 
+**Prefer notebooks?** [`notebooks/`](notebooks/) walks through the same demo interactively —
+one notebook per beat, running the real commands fully offline. Start with
+[`notebooks/00-setup.ipynb`](notebooks/00-setup.ipynb).
+
 ---
 
 ## The 4-command demo
@@ -112,6 +116,7 @@ hardening.patch                     the rc1 → rc2 fix (also available as branc
 demo-runbook.md                     minute-by-minute presenter runbook
 mock-mlflow-compliance-view.html    self-contained offline compliance dashboard (final fallback)
 Makefile                            all of the above as one-word targets (`make help`)
+notebooks/                          the same demo interactively, one notebook per beat (00-04)
 ```
 
 ---
