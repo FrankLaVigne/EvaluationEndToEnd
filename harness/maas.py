@@ -135,7 +135,9 @@ def chat(messages: list[dict], *, model: str | None = None, temperature: float =
     }
     r = requests.post(url, json=payload, headers=_auth_headers(cfg), timeout=timeout)
     r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"]
+    # some models return content: null (e.g. empty completion / reasoning-only) --
+    # coerce to "" so callers never trip over None.
+    return r.json()["choices"][0]["message"].get("content") or ""
 
 
 def ping(model: str | None = None) -> int:
@@ -157,28 +159,42 @@ def ping(model: str | None = None) -> int:
     t0 = time.monotonic()
     try:
         reply = chat([{"role": "user", "content": "Reply with the single word: pong"}],
-                     model=model, max_tokens=5, timeout=15)
+                     model=model, max_tokens=5, timeout=25)
     except Exception as exc:  # network, auth, shape -- report, don't degrade
         print(f"✗ MaaS unreachable / rejected the request: {exc}", file=sys.stderr)
         print("  Check the endpoint URL (include /v1), the key, and MAAS_AUTH_HEADER "
               "(some 3scale plans want a custom header instead of Bearer).", file=sys.stderr)
         return 1
     dt = time.monotonic() - t0
-    print(f"✓ MaaS reachable in {dt:.2f}s — replied: {reply.strip()[:60]!r}")
+    shown = reply.strip()[:60] if reply.strip() else "(empty completion)"
+    print(f"✓ MaaS reachable in {dt:.2f}s — replied: {shown!r}", flush=True)
     return 0
 
 
 def ping_all() -> int:
-    """Ping every model in MAAS_MODELS -- a preflight for the whole fleet."""
+    """Ping every model in MAAS_MODELS -- a preflight for the whole fleet. One
+    model failing (down, slow, malformed) never aborts the sweep."""
     import sys
     models = available_models()
     if not models:
         return ping()
-    rc = 0
+    failed = []
     for m in models:
-        rc |= ping(m)
+        try:
+            rc = ping(m)
+        except Exception as exc:  # belt-and-suspenders: keep sweeping
+            print(f"✗ {m}: {exc}", file=sys.stderr)
+            rc = 1
+        if rc != 0:
+            failed.append(m)
         print("", file=sys.stderr)
-    return 0 if rc == 0 else 1
+    total = len(models)
+    if failed:
+        print(f"fleet: {total - len(failed)}/{total} reachable; "
+              f"unreachable: {', '.join(failed)}", file=sys.stderr)
+        return 1
+    print(f"fleet: {total}/{total} reachable.", file=sys.stderr)
+    return 0
 
 
 if __name__ == "__main__":
