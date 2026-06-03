@@ -114,3 +114,42 @@ def chat(messages: list[dict], *, temperature: float = 0.0,
     r = requests.post(url, json=payload, headers=_auth_headers(cfg), timeout=timeout)
     r.raise_for_status()
     return r.json()["choices"][0]["message"]["content"]
+
+
+def ping() -> int:
+    """Preflight smoke test: one cheap chat completion to confirm the endpoint,
+    key, and auth header all work before you go on stage. Prints a verdict and
+    returns a shell exit code (0 = reachable, 1 = not configured / failed).
+    Never prints the key."""
+    import sys
+    import time
+
+    cfg = maas_config()
+    if not cfg:
+        print("✗ MaaS not configured. Copy .env.example to .env and set "
+              "MAAS_ENDPOINT + MAAS_API_KEY (+ MAAS_MODEL).", file=sys.stderr)
+        return 1
+
+    print(f"pinging  model={cfg['model']}  endpoint={cfg['endpoint']}  "
+          f"key={masked_key()}  header={cfg['auth_header']}", flush=True)
+    t0 = time.monotonic()
+    try:
+        reply = chat([{"role": "user", "content": "Reply with the single word: pong"}],
+                     max_tokens=5, timeout=15)
+    except Exception as exc:  # network, auth, shape -- report, don't degrade
+        print(f"✗ MaaS unreachable / rejected the request: {exc}", file=sys.stderr)
+        print("  Check the endpoint URL (include /v1), the key, and MAAS_AUTH_HEADER "
+              "(some 3scale plans want a custom header instead of Bearer).", file=sys.stderr)
+        return 1
+    dt = time.monotonic() - t0
+    print(f"✓ MaaS reachable in {dt:.2f}s — replied: {reply.strip()[:60]!r}")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    arg = sys.argv[1] if len(sys.argv) > 1 else "ping"
+    if arg == "ping":
+        sys.exit(ping())
+    print(f"usage: python3 -m harness.maas ping", file=sys.stderr)
+    sys.exit(2)

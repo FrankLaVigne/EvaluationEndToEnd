@@ -191,6 +191,7 @@ offline path** on any error, so it can never break the demo.
 
 ```bash
 cp .env.example .env     # then set MAAS_ENDPOINT (incl. /v1), MAAS_MODEL, MAAS_API_KEY
+make maas-ping           # smoke-test the endpoint+key+header before the talk (one cheap call)
 make probe-live          # real model; degrades to canned if .env is missing/unreachable
 ```
 
