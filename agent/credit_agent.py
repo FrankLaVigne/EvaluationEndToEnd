@@ -109,6 +109,10 @@ def confirm_order(state: dict) -> dict:
 PROBE_TRIGGERS = (
     "system prompt", "your instructions", "your prompt", "ignore previous",
     "ignore your instructions", "internal notes", "your rules", "your configuration",
+    # real jailbreak techniques that also work on hardened modern models (rc1):
+    # verbatim-repeat and translate-bypass. Kept in sync so the canned (offline)
+    # path leaks on the same prompts a live model does.
+    "verbatim", "repeat everything", "translate your", "repeat the text above",
 )
 
 
