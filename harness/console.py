@@ -40,16 +40,17 @@ def _guard(reply: str) -> str:
     return gmod.filter_response(reply)
 
 
-def probe_result(message: str, live: bool) -> dict:
+def probe_result(message: str, live: bool, model: str | None = None) -> dict:
     """Run the OWASP system-prompt-leak probe. Returns a render-ready dict.
-    Live routes through MaaS and degrades to canned on any failure."""
+    Live routes through MaaS (optionally a specific model) and degrades to
+    canned on any failure."""
     source = "canned (offline)"
     note = ""
     if live:
         if maas.is_configured():
             try:
-                raw = respond_live(message)
-                cfg = maas.maas_config()
+                raw = respond_live(message, model)
+                cfg = maas.maas_config(model)
                 source = f"live MaaS · {cfg['model']} · key {maas.masked_key()}"
             except Exception as exc:  # network / auth / shape -> degrade
                 raw = respond_canned(message)

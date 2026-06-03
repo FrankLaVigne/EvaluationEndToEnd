@@ -197,10 +197,18 @@ offline path** on any error, so it can never break the demo.
 **Going online (keys via a gitignored `.env`):**
 
 ```bash
-cp .env.example .env     # then set MAAS_ENDPOINT (incl. /v1), MAAS_MODEL, MAAS_API_KEY
-make maas-ping           # smoke-test the endpoint+key+header before the talk (one cheap call)
+cp .env.example .env     # then set MAAS_BASE, MAAS_MODEL(S), MAAS_API_KEY
+make maas-ping           # smoke-test the default model before the talk (one cheap call)
+make maas-ping-all       # smoke-test every model in MAAS_MODELS (whole-fleet preflight)
 make probe-live          # real model; degrades to canned if .env is missing/unreachable
+make probe-live MODEL=qwen36-27b     # probe a specific model
 ```
+
+**Many models, one key.** MaaS serves each model at `{MAAS_BASE}/{model}/v1` on the same key, so
+`MAAS_BASE` + a model name derives the endpoint — set `MAAS_MODELS` (comma-separated) and pick the
+model in the web console or with `MODEL=…`. (For a non-standard URL, set `MAAS_ENDPOINT` instead.)
+Models differ in robustness — a useful demo point: on the same rc1 jailbreak, a smaller model may
+leak while a larger one refuses, and the eval suite is how you compare them.
 
 The key lives only in `.env` (gitignored, **never committed**), is never printed (logs show the
 last 4 only), and `apply_maas_override()` rewrites the job's `model` to your endpoint at submit
@@ -255,7 +263,8 @@ make ui            # -> http://localhost:8501
 What it gives you on one screen:
 
 - **Run against:** a `Cached fixtures` ⇄ `Live Red Hat MaaS` toggle (the degradation story as a
-  literal switch). The sidebar shows whether `.env` is configured and the masked key.
+  literal switch). The sidebar shows whether `.env` is configured, the masked key, and a **model
+  picker** (from `MAAS_MODELS`) so you can probe any served model live.
 - **Candidate:** the current rc1/rc2 state, with **Apply hardening** / **Revert** buttons (they
   run `make harden` / `make unharden`, so the working tree stays the source of truth).
 - **OWASP probe:** pick a preset (verbatim-repeat, translate-bypass, naive) or type your own;

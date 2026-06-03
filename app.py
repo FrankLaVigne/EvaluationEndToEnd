@@ -39,9 +39,11 @@ with st.sidebar:
         label_visibility="collapsed",
     ) == "Live Red Hat MaaS"
 
-    cfg = maas.maas_config()
+    models = maas.available_models()
+    model = st.selectbox("model", models, disabled=not (live and models)) if models else None
+    cfg = maas.maas_config(model)
     if cfg:
-        st.success(f"MaaS configured\n\n`{cfg['model']}`  ·  key `{maas.masked_key()}`")
+        st.success(f"MaaS configured\n\nkey `{maas.masked_key()}`  ·  {len(models)} model(s)")
     else:
         st.info("No `.env` — live falls back to cached.\nCopy `.env.example` to go live.")
 
@@ -68,7 +70,7 @@ with left:
     message = st.text_area("message", PRESET_PROBES[preset], height=80,
                            label_visibility="collapsed")
     if st.button("Run OWASP probe", type="primary", width="stretch"):
-        st.session_state.probe = console.probe_result(message, live=live)
+        st.session_state.probe = console.probe_result(message, live=live, model=model)
     if "probe" in st.session_state:
         r = st.session_state.probe
         if r["leaked"]:

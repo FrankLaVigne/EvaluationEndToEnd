@@ -58,14 +58,25 @@ def load_dotenv(path: Path | None = None) -> None:
             os.environ[key] = val
 
 
-def maas_config() -> dict | None:
-    """Return the MaaS config dict, or None if not fully configured.
-    Requires at least an endpoint and an API key."""
+def maas_config(model: str | None = None) -> dict | None:
+    """Return the MaaS config dict for a model, or None if not configured.
+    Requires an API key plus EITHER:
+      * MAAS_BASE + a model name (endpoint = {base}/{model}/v1), so one base
+        serves many models on the same key -- pass `model` to switch; or
+      * MAAS_ENDPOINT (a single fully-qualified OpenAI-compatible URL)."""
     load_dotenv()
-    endpoint = os.environ.get("MAAS_ENDPOINT", "").strip().rstrip("/")
     api_key = os.environ.get("MAAS_API_KEY", "").strip()
-    model = os.environ.get("MAAS_MODEL", "").strip()
-    if not endpoint or not api_key:
+    if not api_key:
+        return None
+    model = (model or os.environ.get("MAAS_MODEL", "")).strip()
+    base = os.environ.get("MAAS_BASE", "").strip().rstrip("/")
+    explicit = os.environ.get("MAAS_ENDPOINT", "").strip().rstrip("/")
+    if base and model:
+        endpoint = f"{base}/{model}/v1"
+    elif explicit:
+        endpoint = explicit
+        model = model or "default"
+    else:
         return None
     return {
         "endpoint": endpoint,
@@ -73,6 +84,17 @@ def maas_config() -> dict | None:
         "model": model or "default",
         "auth_header": os.environ.get("MAAS_AUTH_HEADER", "Authorization").strip(),
     }
+
+
+def available_models() -> list[str]:
+    """Models offered in the UI/CLI picker: MAAS_MODELS (comma-separated) if set,
+    else the single MAAS_MODEL."""
+    load_dotenv()
+    raw = os.environ.get("MAAS_MODELS", "").strip()
+    if raw:
+        return [m.strip() for m in raw.split(",") if m.strip()]
+    one = os.environ.get("MAAS_MODEL", "").strip()
+    return [one] if one else []
 
 
 def is_configured() -> bool:
@@ -95,13 +117,13 @@ def _auth_headers(cfg: dict) -> dict:
     return {header: cfg["api_key"]}
 
 
-def chat(messages: list[dict], *, temperature: float = 0.0,
+def chat(messages: list[dict], *, model: str | None = None, temperature: float = 0.0,
          max_tokens: int = 600, timeout: float = 30.0) -> str:
     """One OpenAI-compatible chat completion against the MaaS endpoint.
 
     Raises requests.RequestException / KeyError on failure so callers can
     degrade to the deterministic path. Never logs the key."""
-    cfg = maas_config()
+    cfg = maas_config(model)
     if not cfg:
         raise RuntimeError("MaaS not configured (set MAAS_ENDPOINT + MAAS_API_KEY)")
     url = f"{cfg['endpoint']}/chat/completions"
@@ -116,7 +138,7 @@ def chat(messages: list[dict], *, temperature: float = 0.0,
     return r.json()["choices"][0]["message"]["content"]
 
 
-def ping() -> int:
+def ping(model: str | None = None) -> int:
     """Preflight smoke test: one cheap chat completion to confirm the endpoint,
     key, and auth header all work before you go on stage. Prints a verdict and
     returns a shell exit code (0 = reachable, 1 = not configured / failed).
@@ -124,10 +146,10 @@ def ping() -> int:
     import sys
     import time
 
-    cfg = maas_config()
+    cfg = maas_config(model)
     if not cfg:
         print("✗ MaaS not configured. Copy .env.example to .env and set "
-              "MAAS_ENDPOINT + MAAS_API_KEY (+ MAAS_MODEL).", file=sys.stderr)
+              "MAAS_API_KEY plus MAAS_BASE+MAAS_MODEL (or MAAS_ENDPOINT).", file=sys.stderr)
         return 1
 
     print(f"pinging  model={cfg['model']}  endpoint={cfg['endpoint']}  "
@@ -135,7 +157,7 @@ def ping() -> int:
     t0 = time.monotonic()
     try:
         reply = chat([{"role": "user", "content": "Reply with the single word: pong"}],
-                     max_tokens=5, timeout=15)
+                     model=model, max_tokens=5, timeout=15)
     except Exception as exc:  # network, auth, shape -- report, don't degrade
         print(f"✗ MaaS unreachable / rejected the request: {exc}", file=sys.stderr)
         print("  Check the endpoint URL (include /v1), the key, and MAAS_AUTH_HEADER "
@@ -146,10 +168,26 @@ def ping() -> int:
     return 0
 
 
+def ping_all() -> int:
+    """Ping every model in MAAS_MODELS -- a preflight for the whole fleet."""
+    import sys
+    models = available_models()
+    if not models:
+        return ping()
+    rc = 0
+    for m in models:
+        rc |= ping(m)
+        print("", file=sys.stderr)
+    return 0 if rc == 0 else 1
+
+
 if __name__ == "__main__":
     import sys
-    arg = sys.argv[1] if len(sys.argv) > 1 else "ping"
-    if arg == "ping":
-        sys.exit(ping())
-    print(f"usage: python3 -m harness.maas ping", file=sys.stderr)
+    args = sys.argv[1:]
+    cmd = args[0] if args else "ping"
+    if cmd == "ping":
+        sys.exit(ping(args[1] if len(args) > 1 else None))
+    if cmd == "ping-all":
+        sys.exit(ping_all())
+    print("usage: python3 -m harness.maas ping [MODEL] | ping-all", file=sys.stderr)
     sys.exit(2)
