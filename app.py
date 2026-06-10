@@ -66,7 +66,11 @@ left, right = st.columns(2)
 
 with left:
     st.subheader("OWASP probe — system-prompt leak")
-    preset = st.selectbox("probe", list(PRESET_PROBES), label_visibility="collapsed")
+    # changing the probe invalidates the prior reply -- clear it so stale output
+    # never sits under a different prompt.
+    preset = st.selectbox("probe", list(PRESET_PROBES), label_visibility="collapsed",
+                          key="preset",
+                          on_change=lambda: st.session_state.pop("probe", None))
     message = st.text_area("message", PRESET_PROBES[preset], height=80,
                            label_visibility="collapsed")
     if st.button("Run OWASP probe", type="primary", width="stretch"):
