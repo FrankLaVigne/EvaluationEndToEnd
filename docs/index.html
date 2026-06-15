@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EDD Eval Console</title>
+<style>
+  :root {
+    --bg: #0e1117; --panel: #161b22; --border: #30363d; --text: #e6edf3;
+    --muted: #8b949e; --accent: #58a6ff;
+    --good-bg: #0f2e1a; --good-fg: #3fb950; --good-border: #238636;
+    --bad-bg: #2d1418; --bad-fg: #f85149; --bad-border: #da3633;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header { padding: 28px 32px 8px; }
+  h1 { margin: 0; font-size: 28px; }
+  .caption { color: var(--muted); margin: 6px 0 0; }
+  main { display: grid; grid-template-columns: 240px 1fr; gap: 24px; padding: 16px 32px 48px; align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .sidebar { position: sticky; top: 16px; }
+  .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 1100px) { .panes { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  .card h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  label.row { display: block; margin: 8px 0; cursor: pointer; }
+  label.row input { margin-right: 8px; }
+  select, textarea {
+    width: 100%; background: #0d1117; color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; font-size: 14px;
+  }
+  textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lbl { color: var(--muted); font-size: 13px; margin: 12px 0 4px; }
+  button {
+    margin-top: 12px; width: 100%; background: var(--accent); color: #04203f; border: 0;
+    border-radius: 6px; padding: 10px; font-weight: 600; font-size: 14px; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  .banner { border-radius: 6px; padding: 12px 14px; font-weight: 600; }
+  .banner.good { background: var(--good-bg); color: var(--good-fg); border: 1px solid var(--good-border); }
+  .banner.bad  { background: var(--bad-bg);  color: var(--bad-fg);  border: 1px solid var(--bad-border); }
+  .meta { color: var(--muted); font-size: 12.5px; margin: 8px 0; }
+  pre {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px; overflow: auto; font-size: 12.5px; white-space: pre-wrap; word-break: break-word;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.ok { color: var(--good-fg); } td.fail { color: var(--bad-fg); font-weight: 600; }
+  code { background: #0d1117; border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+  .metric { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-top: 6px; }
+  .metric .v { font-size: 13px; font-weight: 600; }
+  .note { color: var(--muted); font-size: 12px; margin-top: 14px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🛡️ EDD Eval Console</h1>
+    <p class="caption">One job · one verdict · one record — driven entirely by the recorded
+      <code>./specs</code> fixtures. Static demo (GitHub Pages); the live MaaS path runs only in the full harness.</p>
+  </header>
+
+  <main>
+    <aside class="sidebar">
+      <div class="card">
+        <h3>Candidate</h3>
+        <label class="row"><input type="radio" name="candidate" value="rc1" checked> rc1 · vulnerable</label>
+        <label class="row"><input type="radio" name="candidate" value="rc2"> rc2 · hardened</label>
+        <div class="metric"><div class="lbl" style="margin:0">current</div><div class="v" id="candidate-now">—</div></div>
+        <p class="note">In the harness this is the <code>candidate</code> tag that
+          <code>make harden</code> flips rc1→rc2 (adds the output guardrail + prompt
+          confidentiality block). Here it's a toggle — no shell in a browser.</p>
+      </div>
+    </aside>
+
+    <div class="panes">
+      <section class="card">
+        <h2>OWASP probe — system-prompt leak</h2>
+        <div class="lbl">probe</div>
+        <select id="probe-preset"></select>
+        <div class="lbl">message</div>
+        <textarea id="probe-msg" rows="3"></textarea>
+        <button id="run-probe">Run OWASP probe</button>
+        <div id="probe-out" hidden style="margin-top:14px"></div>
+      </section>
+
+      <section class="card">
+        <h2>Release gate — one verdict, one exit code</h2>
+        <p class="meta">Replays the recorded EvalHub job record for the selected candidate
+          and rolls the weighted benchmark suite up to a single PROMOTE / BLOCKED verdict.</p>
+        <button id="run-gate">Run release gate</button>
+        <div id="gate-out" hidden style="margin-top:14px"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
